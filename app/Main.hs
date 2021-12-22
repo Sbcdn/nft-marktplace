@@ -29,14 +29,15 @@ import OffChain
 
 main :: IO ()
 main = do
-    [pkh']      <- getArgs
+    [pkh', pak']      <- getArgs
     let 
         scriptFile   = "scripts/nami-script.plutus"
         pkhs            = parsePkh pkh'
+        ppak            = parsePkh pak'
         params          = ScriptParams
             {
-              pFee         = 25         -- 2.5 percent fee of selling price 
---            , pCancelFee   = 2000000    -- 2 Ada Cancle Fee
+              pFee         = 25      -- 2.5 percent fee of selling price 
+            , pAK          = ppak    
             , pAddr        = pkhs
             }
 

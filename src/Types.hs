@@ -37,11 +37,11 @@ import qualified Ledger.Typed.Scripts as Scripts
 data ScriptParams = ScriptParams 
         {
               pFee         :: !Integer
---            , pCancelFee   :: !Integer
+            , pAK          :: !PubKeyHash
             , pAddr        :: !PubKeyHash
 
         } deriving (Prelude.Show, Generic, FromJSON, ToJSON, Prelude.Eq, Prelude.Ord)
-PlutusTx.unstableMakeIsData ''ScriptParams -- [('ScriptParams, 0)]
+PlutusTx.unstableMakeIsData ''ScriptParams
 PlutusTx.makeLift ''ScriptParams
 
 --data ShopParams = ShopParams {

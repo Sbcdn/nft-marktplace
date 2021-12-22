@@ -30,7 +30,7 @@ import           Types
 
 {-# INLINABLE validateBuy #-}
 validateBuy :: ScriptParams -> NftShop -> TxInfo -> Bool 
-validateBuy ScriptParams{..} NftShop{..} info = isFeePaied && isPricePaied && isNftSend && (oneScript $ txInfoData info)
+validateBuy ScriptParams{..} NftShop{..} info = (apiKey pAK info) && isFeePaied && isPricePaied && isNftSend && (oneScript $ txInfoData info)
     where
         buyersKey :: PubKeyHash
         buyersKey = (txInfoSignatories info) !! 0
@@ -53,7 +53,7 @@ validateBuy ScriptParams{..} NftShop{..} info = isFeePaied && isPricePaied && is
 
 {-# INLINABLE validateCancel #-}
 validateCancel :: ScriptParams -> NftShop -> TxInfo -> Bool
-validateCancel ScriptParams{..} NftShop{..} info = isSignedBySeller && isFeePaied && (oneScript $ txInfoData info)
+validateCancel ScriptParams{..} NftShop{..} info = isSignedBySeller && (apiKey pAK info) && isFeePaied && (oneScript $ txInfoData info) 
     where
         isSignedBySeller :: Bool
         isSignedBySeller = txSignedBy info sSeller
@@ -69,8 +69,8 @@ validateCancel ScriptParams{..} NftShop{..} info = isSignedBySeller && isFeePaie
 
 
 {-# INLINABLE validateUpdate #-}
-validateUpdate :: NftShop -> DatumHash -> TxInfo -> Bool
-validateUpdate NftShop{..} r info = isSignedBySeller && (isNewDat $ txInfoOutputs info)
+validateUpdate :: PubKeyHash -> NftShop -> DatumHash -> TxInfo -> Bool
+validateUpdate pAK NftShop{..} r info = isSignedBySeller && (apiKey pAK info) && (isNewDat $ txInfoOutputs info)
     where
         isSignedBySeller :: Bool
         isSignedBySeller = txSignedBy info sSeller
@@ -83,6 +83,11 @@ validateUpdate NftShop{..} r info = isSignedBySeller && (isNewDat $ txInfoOutput
                                 _       -> False
                             else
                                 isNewDat os
+
+{-# INLINABLE apiKey #-}
+apiKey :: PubKeyHash -> TxInfo -> Bool
+apiKey p i = txSignedBy i p
+
 
 {-# INLINABLE cf #-}
 cf :: Integer -> Integer -> Integer 
@@ -104,7 +109,7 @@ oneScript _         = False
 
 {-# INLINABLE mkEscrowValidator #-}
 mkEscrowValidator :: ScriptParams -> ShopDatum -> Action -> ScriptContext -> Bool
-mkEscrowValidator sp (Shop d) (Buy)      ctx  = validateBuy sp d $ scriptContextTxInfo ctx
-mkEscrowValidator sp (Shop d) (Cancel)   ctx  = validateCancel sp d $ scriptContextTxInfo ctx
-mkEscrowValidator _  (Shop d) (Update r) ctx  = validateUpdate d r $ scriptContextTxInfo ctx
-mkEscrowValidator _   _        _         _    = False 
+mkEscrowValidator sp                (Shop d) (Buy)      ctx  = validateBuy sp d $ scriptContextTxInfo ctx
+mkEscrowValidator sp                (Shop d) (Cancel)   ctx  = validateCancel sp d $ scriptContextTxInfo ctx
+mkEscrowValidator ScriptParams{..}  (Shop d) (Update r) ctx  = validateUpdate pAK d r $ scriptContextTxInfo ctx
+mkEscrowValidator _                  _        _         _    = False 
