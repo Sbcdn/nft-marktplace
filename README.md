@@ -5,3 +5,6 @@
 ### Author:   Torben Poguntke
 ### E-Mail:   torben@artifct.app
 ### Contract Size: 6.3 kB
+
+For Auditors:
+Please create issues for your concerns and amendments
