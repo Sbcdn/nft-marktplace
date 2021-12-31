@@ -16,7 +16,7 @@ import qualified Ledger.Typed.Scripts             as Scripts
 import qualified Plutus.V1.Ledger.Scripts         as Scripts
 import qualified PlutusTx
 import           PlutusTx.Prelude                 
-import           Types
+import           Types                            (ScriptParams (..))
 import           OnChain                          (vUt)
 
 

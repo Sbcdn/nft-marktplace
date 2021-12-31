@@ -2,12 +2,12 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE NamedFieldPuns       #-}
-{-# options_ghc -fno-specialise         #-}
+{-# LANGUAGE NamedFieldPuns             #-}
+{-# OPTIONS_GHC -fno-specialise         #-}
 
 module OnChain 
-    (vUt)
-    where
+    ( vUt
+    ) where
     
 import           Ledger
 import           Plutus.V1.Ledger.Value        
@@ -19,24 +19,8 @@ import           Plutus.V1.Ledger.Credential (Credential (PubKeyCredential))
 
 {-# INLINABLE validateBuy #-}
 validateBuy :: ScriptParams -> NftShop -> ATxInfo -> Bool 
-validateBuy ScriptParams{..} NftShop{..} info = 
-                                                if isFeePaied then 
-                                                    if isPricePaied then 
-                                                        if isNftSend then 
-                                                            if (oneScript $ atxInfoData info) then
-                                                                True
-                                                            else
-                                                               False
-                                                        else
-                                                            False
-                                                    else
-                                                        False
-                                                else
-                                                    False
-    where
-        buyersKey :: PubKeyHash
-        buyersKey = (atxInfoSignatories info) !! 0
-
+validateBuy ScriptParams{..} NftShop{..} info =                                           
+    let 
         fee' :: Integer
         fee' = sPrice `cf` pFee
 
@@ -46,52 +30,68 @@ validateBuy ScriptParams{..} NftShop{..} info =
         isPricePaied :: Bool
         isPricePaied = Ada.fromValue (valuePaidTo' info sSeller) >= Ada.lovelaceOf price
 
-        isFeePaied :: Bool
-        isFeePaied = Ada.fromValue (valuePaidTo' info pAddr) >= Ada.lovelaceOf fee'
+        buyersKey :: PubKeyHash
+        buyersKey = head (atxInfoSignatories info)
 
         isNftSend :: Bool
-        isNftSend = checkN info buyersKey sNftCs sNftTn
+        isNftSend = checkN info buyersKey sNftCs sNftTn    
+    in 
+        if isFeePaid info pAddr fee' then 
+            if isPricePaied then 
+                if isNftSend then 
+                    if oneScript $ atxInfoData info then
+                        True
+                    else
+                        False
+                else
+                    False
+            else
+                False
+        else
+            False
+
+maxFee :: Integer
+maxFee = 2000000
+
+minimumFee :: Integer
+minimumFee = 1000000
+
+{-# INLINABLE isFeePaid #-}
+isFeePaid :: ATxInfo -> PubKeyHash -> Integer -> Bool
+isFeePaid info pAddr feeAmt = Ada.fromValue (valuePaidTo' info pAddr) >= Ada.lovelaceOf feeAmt 
 
 
 {-# INLINABLE validateCancel #-}
 validateCancel :: ScriptParams -> NftShop -> ATxInfo -> Bool
-validateCancel ScriptParams{..} NftShop{..} info = 
-                                                    if txSignedBy' (atxInfoSignatories info) sSeller then 
-                                                        if isFeePaied then 
-                                                            if (oneScript $ atxInfoData info) then
-                                                                True
-                                                            else
-                                                                False
-                                                        else
-                                                            False
-                                                    else 
-                                                        False
-    where
-
+validateCancel ScriptParams{..} NftShop{..} info =                                                
+    let
         fee' :: Integer
         fee' = sPrice `cf` pFee
 
         fee'' :: Integer
-        fee'' = if fee' > 2000000 then 2000000 else fee'
-
-        isFeePaied :: Bool
-        isFeePaied = Ada.fromValue (valuePaidTo' info pAddr) >= Ada.lovelaceOf fee''
+        fee'' = if fee' > maxFee then maxFee else fee'
+    in 
+        if txSignedBy' (atxInfoSignatories info) sSeller then 
+            if isFeePaid info pAddr fee'' then 
+                if oneScript $ atxInfoData info then
+                    True
+                else
+                    False
+            else
+                False
+        else 
+            False
 
 
 {-# INLINABLE validateUpdate #-}
 validateUpdate :: NftShop -> DatumHash -> ATxInfo -> Bool
-validateUpdate NftShop{..} r info = 
-                                        if txSignedBy' (atxInfoSignatories info) sSeller then 
-                                            if (isNewDat $ atxInfoOutputs info) then
-                                                True
-                                            else
-                                                False
-                                        else 
-                                            False
+validateUpdate NftShop{..} r info  
+    | txSignedBy' (atxInfoSignatories info) sSeller, (isNewDat $ atxInfoOutputs info) = True
+    | otherwise = False  
     where
         isNewDat :: [TxOut] -> Bool
         isNewDat [] = False
-        isNewDat (o:os) = if (valueOf (txOutValue o) sNftCs sNftTn) == 1 
+        isNewDat (o:os) = if valueOf (txOutValue o) sNftCs sNftTn == 1 
                             then case txOutDatumHash o of
                                 Just dh -> dh == r
                                 _       -> False
@@ -104,41 +104,44 @@ cf :: Integer -> Integer -> Integer
 cf i j = o $ i `PlutusTx.Prelude.divide` 1000 * j 
     where
         o :: Integer -> Integer 
-        o i' =  if i' < 1000000 then 1000000 else i'
+        o i' =  if i' < minimumFee then minimumFee else i'
 
 {-# INLINABLE checkN #-}
 checkN :: ATxInfo -> PubKeyHash -> CurrencySymbol -> TokenName -> Bool
-checkN i p c t = case PlutusTx.Prelude.filter (\(c',t',i') -> c' == c && t' == t && i' == 1) (flattenValue (valuePaidTo' i p)) of
-            (_:[])   -> True
-            _        -> False
+checkN i p c t =
+  let oneToken =
+        PlutusTx.Prelude.filter
+          (\(c',t',i') -> c' == c && t' == t && i' == 1)
+          (flattenValue (valuePaidTo' i p))
+  in length oneToken == 1
+
 
 {-# INLINABLE oneScript #-}
 oneScript :: [(DatumHash, Datum)] -> Bool
-oneScript (_:[])     = True
-oneScript  _         = False 
+oneScript l = length l == 1
 
 {-# INLINABLE txSignedBy' #-}
 txSignedBy' :: [PubKeyHash] -> PubKeyHash -> Bool
-txSignedBy' txInfoSignatories k = case find ((==) k) txInfoSignatories of
-    Just _  -> True
-    Nothing -> False
+txSignedBy' txInfoSignatories k =
+  isJust $ find (k == ) txInfoSignatories
 
 {-# INLINABLE pubKeyOutputsAt' #-}
 pubKeyOutputsAt' :: PubKeyHash -> ATxInfo -> [Value]
 pubKeyOutputsAt' pk p =
-    let flt TxOut{txOutAddress = Address (PubKeyCredential pk') _, txOutValue} | pk == pk' = Just txOutValue
+    let flt TxOut{ txOutAddress = Address (PubKeyCredential pk') _, txOutValue } | pk == pk' = Just txOutValue
+                                                                                 | otherwise = Nothing
         flt _                             = Nothing
     in mapMaybe flt (atxInfoOutputs p)
 
 {-# INLINABLE valuePaidTo' #-}
 valuePaidTo' :: ATxInfo -> PubKeyHash -> Value
-valuePaidTo' ptx pkh = mconcat (pubKeyOutputsAt' pkh ptx)
+valuePaidTo' info pkh = mconcat (pubKeyOutputsAt' pkh info)
 
 {-# INLINABLE mkVal #-}
 mkVal :: ScriptParams -> ShopDatum -> Action -> AScriptContext -> Bool
-mkVal sp (Shop d) (Buy)       ctx  = validateBuy sp d $ aScriptContextTxInfo ctx
-mkVal sp (Shop d) (Cancel)    ctx  = validateCancel sp d $ aScriptContextTxInfo ctx
-mkVal _  (Shop d) (Update dh) ctx  = validateUpdate d dh $ aScriptContextTxInfo ctx
+mkVal sp (Shop d) Buy       ctx   = validateBuy sp d $ aScriptContextTxInfo ctx
+mkVal sp (Shop d) Cancel    ctx   = validateCancel sp d $ aScriptContextTxInfo ctx
+mkVal _  (Shop d) (Update dh) ctx = validateUpdate d dh $ aScriptContextTxInfo ctx
 
 {-# INLINABLE vUt #-}
 vUt :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()

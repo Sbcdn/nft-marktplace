@@ -1,20 +1,8 @@
 cabal-version:      2.4
-name:               nami-script
+name:               artifct-lbuc
 version:            0.1.0.0
-
--- A short (one-line) description of the package.
--- synopsis:
-
--- A longer description of the package.
--- description:
-
--- A URL where users can report bugs.
--- bug-reports:
-
--- The license under which the package is released.
--- license:
 author:             sbcdn
-maintainer:         torben.poguntke@iu-study.org
+maintainer:         torben@artifct.app
 Copyright:          © 2021 Torben Poguntke
 Build-Type:         Simple
 
@@ -27,21 +15,6 @@ flag defer-plugin-errors
     default: False
     manual: True
 
-common lang
-    default-language: Haskell2010
-    default-extensions: ExplicitForAll ScopedTypeVariables
-                        DeriveGeneric StandaloneDeriving DeriveLift
-                        GeneralizedNewtypeDeriving DeriveFunctor DeriveFoldable
-                        DeriveTraversable MultiParamTypeClasses
-    ghc-options: -Wall -Wnoncanonical-monad-instances -Wunused-packages
-                 -Wincomplete-uni-patterns -Wincomplete-record-updates
-                 -Wredundant-constraints -Widentities
-                 -- See Plutus Tx readmef
-                 -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
-    if flag(defer-plugin-errors)
-        ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
-
-
 library
   hs-source-dirs:     src
   default-language:   Haskell2010
@@ -52,7 +25,6 @@ library
                  -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
   exposed-modules:     
                     Types
-                 --   Trace
                     OnChain
                     OffChain
   build-depends:     
@@ -60,35 +32,13 @@ library
                      , base -any
                      , bytestring -any
                      , containers -any
-                     , data-default -any
-                     , freer-extras -any
-                     , mtl -any
                      , plutus-core -any
                      , plutus-tx -any
-                     , plutus-tx-plugin -any
-                     , plutus-contract -any
                      , playground-common -any
                      , plutus-ledger -any
                      , plutus-ledger-api -any
-                     , plutus-use-cases -any
-                     , plutus-pab -any
-                     , plutus-chain-index -any
-                     , template-haskell -any
-                     , lens -any
-                     , text -any
-                     , prettyprinter -any
-                     , hashable -any
-                     , freer-simple -any
-                     , streaming -any
-                     , semigroups -any      
-                     , mono-traversable -any
                      , serialise -any
-                     , cardano-api -any     
-                     , utf8-string -any 
-                     , hashable -any
-                     , openapi3 -any
-                     , MonadRandom -any
-                     , cardano-wallet-core
+                     , cardano-api -any
 
   if !(impl(ghcjs) || os(ghcjs))
         build-depends: plutus-tx-plugin -any
@@ -99,7 +49,6 @@ library
 
 executable tp-nami-script
     main-is:          Main.hs
-    other-modules:    
     hs-source-dirs:   app
     default-language: Haskell2010
     ghc-options:      -Wall
@@ -108,27 +57,11 @@ executable tp-nami-script
                      , base -any
                      , bytestring
                      , containers
-                --     , freer-simple
-                --     , freer-extras -any
                      , data-default
-                --     , plutus-contract
                      , plutus-ledger
-                --     , plutus-pab
-                --     , plutus-use-cases
                      , prettyprinter
-                --     , req ^>= 3.9.0
-                --     , text
-                --    , uuid
-                --     , playground-common
                      , plutus-tx
                      , cardano-api -any
                      , cardano-ledger-alonzo -any
                      , plutus-ledger-api -any
-                     , nami-script
-                     , text -any
-
-    if !(impl(ghcjs) || os(ghcjs))
-        build-depends: plutus-tx-plugin -any
-
-    if flag(defer-plugin-errors)
-        ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
+                     , artifct-lbuc
