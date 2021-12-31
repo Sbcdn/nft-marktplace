@@ -8,33 +8,28 @@ import Ledger.Bytes                        (getLedgerBytes)
 import Prelude
 import System.Environment                  (getArgs)
 
-import qualified Data.ByteString.Lazy as B
-
-import Data.Text
-import PlutusTx.Builtins
-
 import Types
 import OffChain
 
 main :: IO ()
 main = do
-    [pkh']      <- getArgs
-    let 
-        scriptFile   = "scripts/artifct-lubc.plutus"
-        pkhs            = parsePkh pkh'
-        params          = ScriptParams
-            {
-              pFee         = 25      -- 2.5 percent fee of selling price   
-            , pAddr        = pkhs
-            }
+    args <- getArgs
+    case args of
+      [] -> error "You need to provide PubKeyHash!"
+      (pkh':_) -> do
+        let
+            scriptFile   = "scripts/artifct-lbuc.plutus"
+            pkhs            = parsePkh pkh'
+            params          = ScriptParams
+                {
+                  pFee         = 25      -- 2.5 percent fee of selling price
+                , pAddr        = pkhs
+                }
 
-    scriptResult <- writeFileTextEnvelope scriptFile Nothing $ apiScript params
-    case scriptResult of
-        Left err -> print $ displayError err
-        Right () -> putStrLn $ "wrote NFT policy to file " ++ show scriptFile
-
-parsePk :: String -> PubKey
-parsePk s = PubKey $ getPubKey $ fromString s
+        scriptResult <- writeFileTextEnvelope scriptFile Nothing $ apiScript params
+        case scriptResult of
+            Left err -> print $ displayError err
+            Right () -> putStrLn $ "wrote NFT policy to file " ++ show scriptFile
 
 parsePkh :: String -> PubKeyHash
 parsePkh s = PubKeyHash $ getLedgerBytes $ fromString s
