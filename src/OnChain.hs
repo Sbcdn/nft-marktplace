@@ -23,7 +23,7 @@ validateBuy :: ScriptParams -> NftShop -> ATxInfo -> Bool
 validateBuy ScriptParams{..} NftShop{..} info =                                           
     let 
         fee' :: Integer
-        fee' = sPrice `cf` pFee
+        fee' = sPrice `cf` (pFee + sRr)
 
         price :: Integer
         price = sPrice - fee'
@@ -134,9 +134,9 @@ valuePaidTo' info pkh = mconcat (pubKeyOutputsAt' pkh info)
 
 {-# INLINABLE mkVal #-}
 mkVal :: ScriptParams -> ShopDatum -> Action -> AScriptContext -> Bool
-mkVal sp (Shop d) Buy       ctx   = validateBuy sp d $ aScriptContextTxInfo ctx
-mkVal sp (Shop d) Cancel    ctx   = validateCancel sp d $ aScriptContextTxInfo ctx
-mkVal _  (Shop d) (Update dh) ctx = validateUpdate d dh $ aScriptContextTxInfo ctx
+mkVal sp (Shop d) Buy           ctx   = validateBuy sp d $ aScriptContextTxInfo ctx
+mkVal sp (Shop d) Cancel        ctx   = validateCancel sp d $ aScriptContextTxInfo ctx
+mkVal _  (Shop d) (Update dh)   ctx   = validateUpdate d dh $ aScriptContextTxInfo ctx
 
 {-# INLINABLE vUt #-}
 vUt :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
