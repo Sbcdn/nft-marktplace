@@ -3,6 +3,7 @@
 {-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE NamedFieldPuns             #-}
+{-# LANGUAGE BangPatterns               #-}
 {-# OPTIONS_GHC -fno-specialise         #-}
 
 module OnChain 
@@ -50,37 +51,20 @@ validateBuy ScriptParams{..} NftShop{..} info =
         else
             False
 
-maxFee :: Integer
-maxFee = 2000000
-
-minimumFee :: Integer
-minimumFee = 1000000
-
-{-# INLINABLE isFeePaid #-}
-isFeePaid :: ATxInfo -> PubKeyHash -> Integer -> Bool
-isFeePaid info pAddr feeAmt = Ada.fromValue (valuePaidTo' info pAddr) >= Ada.lovelaceOf feeAmt 
-
-
 {-# INLINABLE validateCancel #-}
 validateCancel :: ScriptParams -> NftShop -> ATxInfo -> Bool
-validateCancel ScriptParams{..} NftShop{..} info =                                                
-    let
+validateCancel ScriptParams{..} NftShop{..} info 
+    | txSignedBy' (atxInfoSignatories info) sSeller, isFeePaid', oneScript $ atxInfoData info = True
+    | otherwise = False  
+    where
         fee' :: Integer
         fee' = sPrice `cf` pFee
 
         fee'' :: Integer
         fee'' = if fee' > maxFee then maxFee else fee'
-    in 
-        if txSignedBy' (atxInfoSignatories info) sSeller then 
-            if isFeePaid info pAddr fee'' then 
-                if oneScript $ atxInfoData info then
-                    True
-                else
-                    False
-            else
-                False
-        else 
-            False
+
+        isFeePaid' :: Bool
+        isFeePaid' = Ada.fromValue (valuePaidTo' info pAddr) >= Ada.lovelaceOf fee''
 
 
 {-# INLINABLE validateUpdate #-}
@@ -98,6 +82,17 @@ validateUpdate NftShop{..} r info
                             else
                                 isNewDat os
 
+{-# INLINABLE maxFee #-}
+maxFee :: Integer
+maxFee = 2000000
+
+{-# INLINABLE minimumFee #-}
+minimumFee :: Integer
+minimumFee = 1000000
+
+{-# INLINABLE isFeePaid #-}
+isFeePaid :: ATxInfo -> PubKeyHash -> Integer -> Bool
+isFeePaid info pAddr feeAmt = Ada.fromValue (valuePaidTo' info pAddr) >= Ada.lovelaceOf feeAmt 
 
 {-# INLINABLE cf #-}
 cf :: Integer -> Integer -> Integer 
