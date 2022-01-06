@@ -38,14 +38,6 @@ data NftShop = NftShop
 PlutusTx.makeIsDataIndexed ''NftShop [('NftShop, 0)]
 PlutusTx.makeLift ''NftShop
 
-instance Eq NftShop where
-    {-# INLINABLE (==) #-}
-    x == y =    sPrice      x == sPrice     y &&
-                sSeller     x == sSeller    y &&
-                sRr         x == sRr        y &&
-                sNftCs      x == sNftCs     y &&
-                sNftTn      x == sNftTn     y 
-
 data Action = Update DatumHash | Cancel | Buy
     deriving (Prelude.Show, Generic, FromJSON, ToJSON, Prelude.Eq, Prelude.Ord)
 PlutusTx.makeIsDataIndexed ''Action [('Update, 0),('Cancel, 1),('Buy, 2)]

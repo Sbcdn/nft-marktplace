@@ -20,36 +20,25 @@ import           Plutus.V1.Ledger.Credential (Credential (PubKeyCredential))
 
 {-# INLINABLE validateBuy #-}
 validateBuy :: ScriptParams -> NftShop -> ATxInfo -> Bool 
-validateBuy ScriptParams{..} NftShop{..} info =                                           
-    let 
+validateBuy ScriptParams{..} NftShop{..} info 
+    | isPaid pAddr fee', isPaid sSeller price, isNftSend, oneScript $ atxInfoData info = True 
+    | otherwise = False              
+    where 
         fee' :: Integer
         fee' = sPrice `cf` (pFee + sRr)
 
         price :: Integer
         price = sPrice - fee'
 
-        isPricePaied :: Bool
-        isPricePaied = Ada.fromValue (valuePaidTo' info sSeller) >= Ada.lovelaceOf price
+        isPaid :: PubKeyHash -> Integer -> Bool
+        isPaid addr amt = Ada.fromValue (valuePaidTo' info addr) >= Ada.lovelaceOf amt 
 
         buyersKey :: PubKeyHash
         buyersKey = head (atxInfoSignatories info)
 
         isNftSend :: Bool
         isNftSend = checkN info buyersKey sNftCs sNftTn    
-    in 
-        if isFeePaid info pAddr fee' then 
-            if isPricePaied then 
-                if isNftSend then 
-                    if oneScript $ atxInfoData info then
-                        True
-                    else
-                        False
-                else
-                    False
-            else
-                False
-        else
-            False
+
 
 {-# INLINABLE validateCancel #-}
 validateCancel :: ScriptParams -> NftShop -> ATxInfo -> Bool
@@ -72,16 +61,12 @@ validateUpdate :: NftShop -> DatumHash -> ATxInfo -> Bool
 validateUpdate NftShop{..} r info  
     | txSignedBy' (atxInfoSignatories info) sSeller, (isNewDat $ atxInfoOutputs info) = True
     | otherwise = False  
-    where
+    where  
         isNewDat :: [TxOut] -> Bool
-        isNewDat [] = False
-        isNewDat (o:os) = if valueOf (txOutValue o) sNftCs sNftTn == 1 
-                            then case txOutDatumHash o of
-                                Just dh -> dh == r
-                                _       -> False
-                            else
-                                isNewDat os
-
+        isNewDat os = 
+            let dhl = PlutusTx.Prelude.filter (\dh' -> (txOutDatumHash dh') == (Just r)) os
+            in length dhl == 1
+        
 {-# INLINABLE maxFee #-}
 maxFee :: Integer
 maxFee = 2000000
@@ -89,10 +74,6 @@ maxFee = 2000000
 {-# INLINABLE minimumFee #-}
 minimumFee :: Integer
 minimumFee = 1000000
-
-{-# INLINABLE isFeePaid #-}
-isFeePaid :: ATxInfo -> PubKeyHash -> Integer -> Bool
-isFeePaid info pAddr feeAmt = Ada.fromValue (valuePaidTo' info pAddr) >= Ada.lovelaceOf feeAmt 
 
 {-# INLINABLE cf #-}
 cf :: Integer -> Integer -> Integer 
@@ -109,7 +90,6 @@ checkN i p c t =
           (\(c',t',i') -> c' == c && t' == t && i' == 1)
           (flattenValue (valuePaidTo' i p))
   in length oneToken == 1
-
 
 {-# INLINABLE oneScript #-}
 oneScript :: [(DatumHash, Datum)] -> Bool
