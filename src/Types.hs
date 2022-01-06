@@ -31,6 +31,7 @@ data NftShop = NftShop
         {
               sPrice        :: !Integer
             , sSeller       :: !PubKeyHash  
+            , sRr           :: !Integer
             , sNftCs        :: !CurrencySymbol
             , sNftTn        :: !TokenName
         } deriving (Prelude.Show, Generic, FromJSON, ToJSON, Prelude.Eq, Prelude.Ord)
@@ -41,6 +42,7 @@ instance Eq NftShop where
     {-# INLINABLE (==) #-}
     x == y =    sPrice      x == sPrice     y &&
                 sSeller     x == sSeller    y &&
+                sRr         x == sRr        y &&
                 sNftCs      x == sNftCs     y &&
                 sNftTn      x == sNftTn     y 
 
