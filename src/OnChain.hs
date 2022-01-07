@@ -25,7 +25,7 @@ validateBuy ScriptParams{..} NftShop{..} info
     | otherwise = False              
     where 
         fee' :: Integer
-        fee' = sPrice `cf` (pFee + sRr)
+        fee' = (cf True sPrice pFee) + (cf False sPrice sRr)
 
         price :: Integer
         price = sPrice - fee'
@@ -39,7 +39,6 @@ validateBuy ScriptParams{..} NftShop{..} info
         isNftSend :: Bool
         isNftSend = checkN info buyersKey sNftCs sNftTn    
 
-
 {-# INLINABLE validateCancel #-}
 validateCancel :: ScriptParams -> NftShop -> ATxInfo -> Bool
 validateCancel ScriptParams{..} NftShop{..} info 
@@ -47,14 +46,13 @@ validateCancel ScriptParams{..} NftShop{..} info
     | otherwise = False  
     where
         fee' :: Integer
-        fee' = sPrice `cf` pFee
+        fee' =  cf True sPrice pFee
 
         fee'' :: Integer
         fee'' = if fee' > maxFee then maxFee else fee'
 
         isFeePaid' :: Bool
         isFeePaid' = Ada.fromValue (valuePaidTo' info pAddr) >= Ada.lovelaceOf fee''
-
 
 {-# INLINABLE validateUpdate #-}
 validateUpdate :: NftShop -> DatumHash -> ATxInfo -> Bool
@@ -71,16 +69,16 @@ validateUpdate NftShop{..} r info
 maxFee :: Integer
 maxFee = 2000000
 
-{-# INLINABLE minimumFee #-}
-minimumFee :: Integer
-minimumFee = 1000000
+{-# INLINABLE minFee' #-}
+minFee' :: Integer
+minFee' = 1000000
 
 {-# INLINABLE cf #-}
-cf :: Integer -> Integer -> Integer 
-cf i j = o $ i `PlutusTx.Prelude.divide` 1000 * j 
+cf :: Bool -> Integer -> Integer -> Integer 
+cf b i j = o $ i `PlutusTx.Prelude.divide` 1000 * j 
     where
         o :: Integer -> Integer 
-        o i' =  if i' < minimumFee then minimumFee else i'
+        o i' =  if  minFee' > i' && b then minFee' else i'
 
 {-# INLINABLE checkN #-}
 checkN :: ATxInfo -> PubKeyHash -> CurrencySymbol -> TokenName -> Bool
