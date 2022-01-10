@@ -4,9 +4,8 @@
 ### Date:     10.01.22
 ### Author:   Torben Poguntke
 ### E-Mail:   torben@artifct.app
-### Contract Size: 5.8 kB
-
-For Auditors:
-Please create issues for your concerns and amendments
+### Contract Size: 5.75 kB
 
 ### Script Addr: addr_test1wq0dnfwds7tygrfz6ygesprvlzngpe35laty5k6qavajsvqu68ccf
+
+## @Auditors: Please create issues for your concerns and amendments
