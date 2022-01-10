@@ -32,6 +32,7 @@ data NftShop = NftShop
               sPrice        :: !Integer
             , sSeller       :: !PubKeyHash  
             , sRr           :: !Integer
+            , sR            :: !PubKeyHash
             , sNftCs        :: !CurrencySymbol
             , sNftTn        :: !TokenName
         } deriving (Prelude.Show, Generic, FromJSON, ToJSON, Prelude.Eq, Prelude.Ord)
