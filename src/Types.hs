@@ -49,8 +49,16 @@ data ShopDatum = Shop NftShop
 PlutusTx.makeIsDataIndexed ''ShopDatum [ ('Shop, 0) ]
 PlutusTx.makeLift ''ShopDatum
 
+data ATxInInfo = ATxInInfo 
+  {
+      atxInInfoOutRef    :: BuiltinData
+    , atxInInfoResolved  :: TxOut
+
+  }
+PlutusTx.makeIsDataIndexed ''ATxInInfo [('ATxInInfo,0)]
+
 data ATxInfo = ATxInfo {
-      atxInfoInputs      :: BuiltinData
+      atxInfoInputs      :: [ATxInInfo]
     , atxInfoOutputs     :: [TxOut]
     , atxInfoFee         :: BuiltinData
     , atxInfoMint        :: BuiltinData
@@ -58,7 +66,7 @@ data ATxInfo = ATxInfo {
     , atxInfoWdrl        :: BuiltinData
     , atxInfoValidRange  :: BuiltinData
     , atxInfoSignatories :: [PubKeyHash]
-    , atxInfoData        :: [(DatumHash, Datum)]
+    , atxInfoData        :: BuiltinData
     , atxInfoId          :: BuiltinData
 }
 PlutusTx.makeIsDataIndexed ''ATxInfo [('ATxInfo,0)]

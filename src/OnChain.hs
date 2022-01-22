@@ -15,12 +15,12 @@ import           Ledger.Ada                       as Ada
 import           PlutusTx.Prelude
 import           Types
 import           PlutusTx.IsData.Class
-import           Plutus.V1.Ledger.Credential (Credential (PubKeyCredential))
+import           Plutus.V1.Ledger.Credential      (Credential (PubKeyCredential,ScriptCredential))
 
 {-# INLINABLE validateBuy #-}
 validateBuy :: ScriptParams -> NftShop -> ATxInfo -> Bool 
 validateBuy ScriptParams{..} NftShop{..} info 
-    | isPaid pAddr fee', isPaid sSeller price, sRr <= 0 || isPaid sR roy, isNftSend, oneScript $ atxInfoData info = True
+    | isPaid pAddr fee', isPaid sSeller price, sRr <= 0 || isPaid sR roy, isNftSend, scriptInputsOk (atxInfoInputs info) sNftCs sNftTn = True
     | otherwise = False              
     where 
         fee' :: Integer
@@ -30,30 +30,19 @@ validateBuy ScriptParams{..} NftShop{..} info
         roy = sPrice `cf` sRr
 
         price :: Integer
-        price = sPrice - fee' - roy
+        price = sPrice - fee' - if sRr == 0 then 0 else roy
 
         isPaid :: PubKeyHash -> Integer -> Bool
         isPaid addr amt = Ada.fromValue (valuePaidTo' info addr) >= Ada.lovelaceOf amt 
 
         isNftSend :: Bool
-        isNftSend = checkN info (head $ atxInfoSignatories info) sNftCs sNftTn    
+        isNftSend = valueOf (valuePaidTo' info (head $ atxInfoSignatories info)) sNftCs sNftTn > 1
 
 {-# INLINABLE validateCancel #-}
 validateCancel ::  NftShop -> ATxInfo -> Bool
 validateCancel NftShop{..} info 
     | txSignedBy' (atxInfoSignatories info) sSeller = True
     | otherwise = False  
-
-{-# INLINABLE validateUpdate #-}
-validateUpdate :: NftShop -> DatumHash -> ATxInfo -> Bool
-validateUpdate NftShop{..} r info  
-    | txSignedBy' (atxInfoSignatories info) sSeller, (isNewDat $ atxInfoOutputs info) = True
-    | otherwise = False  
-    where  
-        isNewDat :: [TxOut] -> Bool
-        isNewDat os = 
-            let dhl = PlutusTx.Prelude.filter (\dh' -> (txOutDatumHash dh') == (Just r)) os
-            in length dhl == 1
 
 {-# INLINABLE minAda' #-}
 minAda' :: Integer
@@ -63,18 +52,19 @@ minAda' = 1000000
 cf :: Integer -> Integer -> Integer 
 cf i j = PlutusTx.Prelude.max minAda' (i `PlutusTx.Prelude.divide` 1000 * j)
 
-{-# INLINABLE checkN #-}
-checkN :: ATxInfo -> PubKeyHash -> CurrencySymbol -> TokenName -> Bool
-checkN i p c t =
-  let oneToken =
-        PlutusTx.Prelude.filter
-          (\(c',t',i') -> c' == c && t' == t && i' == 1)
-          (flattenValue (valuePaidTo' i p))
-  in length oneToken == 1
+{-# INLINABLE scriptInputsOk #-}
+scriptInputsOk :: [ATxInInfo] -> CurrencySymbol -> TokenName -> Bool
+scriptInputsOk i c t
+    | length (filter f i) <= 1, length (filter g i) == 1  = True
+    | otherwise = False
+    where 
+        g :: ATxInInfo -> Bool
+        g ATxInInfo{atxInInfoResolved=TxOut{txOutAddress=Address (ScriptCredential _) _ , txOutValue=v  ,  txOutDatumHash=Just _}} = valueOf v c t >= 1
+        g _ = False
 
-{-# INLINABLE oneScript #-}
-oneScript :: [(DatumHash, Datum)] -> Bool
-oneScript l = length l == 1
+        f :: ATxInInfo -> Bool
+        f  ATxInInfo{atxInInfoResolved=TxOut{txOutAddress=Address (ScriptCredential _) _ , txOutValue=_  ,  txOutDatumHash=Just _}} = True
+        f _ = False
 
 {-# INLINABLE txSignedBy' #-}
 txSignedBy' :: [PubKeyHash] -> PubKeyHash -> Bool
@@ -97,7 +87,7 @@ valuePaidTo' info pkh = mconcat (pubKeyOutputsAt' pkh info)
 mkVal :: ScriptParams -> ShopDatum -> Action -> AScriptContext -> Bool
 mkVal sp (Shop d) Buy           ctx   = validateBuy sp d    $ aScriptContextTxInfo ctx
 mkVal _  (Shop d) Cancel        ctx   = validateCancel d    $ aScriptContextTxInfo ctx
-mkVal _  (Shop d) (Update dh)   ctx   = validateUpdate d dh $ aScriptContextTxInfo ctx
+mkVal _   _       _             _     = False
 
 {-# INLINABLE vUt #-}
 vUt :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
