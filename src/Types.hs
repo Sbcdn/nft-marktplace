@@ -49,6 +49,8 @@ data ShopDatum = Shop NftShop
 PlutusTx.makeIsDataIndexed ''ShopDatum [ ('Shop, 0) ]
 PlutusTx.makeLift ''ShopDatum
 
+
+
 data ATxInInfo = ATxInInfo 
   {
       atxInInfoOutRef    :: BuiltinData
@@ -56,6 +58,7 @@ data ATxInInfo = ATxInInfo
 
   }
 PlutusTx.makeIsDataIndexed ''ATxInInfo [('ATxInInfo,0)]
+
 
 data ATxInfo = ATxInfo {
       atxInfoInputs      :: [ATxInInfo]

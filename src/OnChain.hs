@@ -15,7 +15,7 @@ import           Ledger.Ada                       as Ada
 import           PlutusTx.Prelude
 import           Types
 import           PlutusTx.IsData.Class
-import           Plutus.V1.Ledger.Credential      (Credential (PubKeyCredential,ScriptCredential))
+import           Plutus.V1.Ledger.Credential      (Credential (PubKeyCredential)) --ScriptCredential
 
 {-# INLINABLE validateBuy #-}
 validateBuy :: ScriptParams -> NftShop -> ATxInfo -> Bool 
@@ -27,16 +27,16 @@ validateBuy ScriptParams{..} NftShop{..} info
         fee' = sPrice `cf` pFee
 
         roy :: Integer
-        roy = sPrice `cf` sRr
+        roy = if sRr <= 0 then 0 else sPrice `cf` sRr
 
         price :: Integer
-        price = sPrice - fee' - if sRr == 0 then 0 else roy
+        price = sPrice - fee' - roy
 
         isPaid :: PubKeyHash -> Integer -> Bool
         isPaid addr amt = Ada.fromValue (valuePaidTo' info addr) >= Ada.lovelaceOf amt 
 
         isNftSend :: Bool
-        isNftSend = valueOf (valuePaidTo' info (head $ atxInfoSignatories info)) sNftCs sNftTn > 1
+        isNftSend = valueOf (valuePaidTo' info (head $ atxInfoSignatories info)) sNftCs sNftTn >= 1
 
 {-# INLINABLE validateCancel #-}
 validateCancel ::  NftShop -> ATxInfo -> Bool
@@ -51,7 +51,7 @@ minAda' = 1000000
 {-# INLINABLE cf #-}
 cf :: Integer -> Integer -> Integer 
 cf i j = PlutusTx.Prelude.max minAda' (i `PlutusTx.Prelude.divide` 1000 * j)
-
+{-
 {-# INLINABLE scriptInputsOk #-}
 scriptInputsOk :: [ATxInInfo] -> CurrencySymbol -> TokenName -> Bool
 scriptInputsOk i c t
@@ -59,12 +59,23 @@ scriptInputsOk i c t
     | otherwise = False
     where 
         g :: ATxInInfo -> Bool
-        g ATxInInfo{atxInInfoResolved=TxOut{txOutAddress=Address (ScriptCredential _) _ , txOutValue=v  ,  txOutDatumHash=Just _}} = valueOf v c t >= 1
+        g ATxInInfo{atxInInfoResolved=TxOut{txOutAddress=Address (ScriptCredential _) _ , txOutValue}} = valueOf txOutValue c t >= 1
         g _ = False
 
         f :: ATxInInfo -> Bool
-        f  ATxInInfo{atxInInfoResolved=TxOut{txOutAddress=Address (ScriptCredential _) _ , txOutValue=_  ,  txOutDatumHash=Just _}} = True
+        f ATxInInfo{atxInInfoResolved=TxOut{txOutAddress=Address (ScriptCredential _) _}} = True
         f _ = False
+-}
+scriptInputsOk :: [ATxInInfo] -> CurrencySymbol -> TokenName -> Bool
+scriptInputsOk i c t 
+    | length (filter f i) <= 1, length (filter g i) == 1  = True
+    | otherwise = False
+    where 
+        f :: ATxInInfo -> Bool
+        f  = isJust . txOutDatumHash . atxInInfoResolved 
+
+        g :: ATxInInfo -> Bool
+        g o = valueOf ((txOutValue . atxInInfoResolved) o) c t  >= 1 && f o
 
 {-# INLINABLE txSignedBy' #-}
 txSignedBy' :: [PubKeyHash] -> PubKeyHash -> Bool
