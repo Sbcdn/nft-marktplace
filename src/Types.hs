@@ -10,7 +10,6 @@
 {-# options_ghc -Wno-redundant-constraints #-}
 {-# options_ghc -fno-specialise            #-}
 
-
 module Types where
 
 import           Ledger
@@ -18,6 +17,7 @@ import           Playground.Contract (FromJSON, Generic, ToJSON)
 import qualified PlutusTx
 import           PlutusTx.Prelude
 import qualified Prelude             as Prelude
+import           Plutus.V1.Ledger.Credential      (Credential)
 
 data ScriptParams = ScriptParams 
         {
@@ -39,32 +39,50 @@ data NftShop = NftShop
 PlutusTx.makeIsDataIndexed ''NftShop [('NftShop, 0)]
 PlutusTx.makeLift ''NftShop
 
-data Action = Update DatumHash | Cancel | Buy
+data Action = Owner | Buy
     deriving (Prelude.Show, Generic, FromJSON, ToJSON, Prelude.Eq, Prelude.Ord)
-PlutusTx.makeIsDataIndexed ''Action [('Update, 0),('Cancel, 1),('Buy, 2)]
+PlutusTx.makeIsDataIndexed ''Action [('Owner, 1),('Buy, 2)]
 PlutusTx.makeLift ''Action
 
-data ShopDatum = Shop NftShop 
-    deriving stock (Prelude.Show, Generic, Prelude.Eq, Prelude.Ord)
-PlutusTx.makeIsDataIndexed ''ShopDatum [ ('Shop, 0) ]
-PlutusTx.makeLift ''ShopDatum
+data AAddress = AAddress
+  {
+      aaddressCredential        :: Credential
+    , aaddressStakingCredential :: BuiltinData
+  }
+PlutusTx.makeIsDataIndexed ''AAddress [('AAddress,0)]
+
+data ATxOut = ATxOut 
+  {
+      atxOutAddress             :: AAddress
+    , atxOutValue               :: Value
+    , atxOutDatumHash           :: BuiltinData
+  }
+PlutusTx.makeIsDataIndexed ''ATxOut [('ATxOut,0)]
+
+data ATxInInfo = ATxInInfo 
+  {
+      atxInInfoOutRef           :: BuiltinData
+    , atxInInfoResolved         :: ATxOut
+
+  }
+PlutusTx.makeIsDataIndexed ''ATxInInfo [('ATxInInfo,0)]
 
 data ATxInfo = ATxInfo {
-      atxInfoInputs      :: BuiltinData
-    , atxInfoOutputs     :: [TxOut]
-    , atxInfoFee         :: BuiltinData
-    , atxInfoMint        :: BuiltinData
-    , atxInfoDCert       :: BuiltinData
-    , atxInfoWdrl        :: BuiltinData
-    , atxInfoValidRange  :: BuiltinData
-    , atxInfoSignatories :: [PubKeyHash]
-    , atxInfoData        :: [(DatumHash, Datum)]
-    , atxInfoId          :: BuiltinData
+      atxInfoInputs             :: [ATxInInfo]
+    , atxInfoOutputs            :: [ATxOut]
+    , atxInfoFee                :: BuiltinData
+    , atxInfoMint               :: BuiltinData
+    , atxInfoDCert              :: BuiltinData
+    , atxInfoWdrl               :: BuiltinData
+    , atxInfoValidRange         :: BuiltinData
+    , atxInfoSignatories        :: [PubKeyHash]
+    , atxInfoData               :: BuiltinData
+    , atxInfoId                 :: BuiltinData
 }
 PlutusTx.makeIsDataIndexed ''ATxInfo [('ATxInfo,0)]
 
 data AScriptContext = AScriptContext
-  { aScriptContextTxInfo :: ATxInfo
-  , scriptContextPurpose :: BuiltinData
+  { aScriptContextTxInfo        :: ATxInfo
+  , scriptContextPurpose        :: BuiltinData
   }
 PlutusTx.makeIsDataIndexed ''AScriptContext [('AScriptContext,0)]
