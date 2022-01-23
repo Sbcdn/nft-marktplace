@@ -1,11 +1,10 @@
 # Artifct 
 ## Plutus Smart Contract - List | Buy | Cancel | Update
 ### Release : V0.1.1
-### Date:     10.01.22
+### Date:     23.01.22
 ### Author:   Torben Poguntke
 ### E-Mail:   torben@artifct.app
-### Contract Size: 5.75 kB
+### Contract Size: 4.77 kB
 
-### Script Addr: addr_test1wq0dnfwds7tygrfz6ygesprvlzngpe35laty5k6qavajsvqu68ccf
+### Script Addr Testnet: addr_test1wrady0qmzqwjktt2j8xh7g7wx4l2vvr8aupmfe7wck9tr3syzk447
 
-## @Auditors: Please create issues for your concerns and amendments
