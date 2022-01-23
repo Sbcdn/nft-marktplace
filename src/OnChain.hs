@@ -52,20 +52,22 @@ minAda' = 1000000
 cf :: Integer -> Integer -> Integer 
 cf i j = PlutusTx.Prelude.max minAda' (i `PlutusTx.Prelude.divide` 1000 * j)
 
-scriptInputsOk :: [ATxInInfo] -> CurrencySymbol -> TokenName -> Bool
-scriptInputsOk i c t 
-    | length (filter f i) <= 1, length (filter g i) == 1  = True
-    | otherwise = False
-    where 
-        f :: ATxInInfo -> Bool 
-        f = h . aaddressCredential . atxOutAddress . atxInInfoResolved
-            where
-                h :: Credential -> Bool
-                h (ScriptCredential _)  = True
-                h _                     = False
+{-# INLINABLE isScriptAddress #-}
+isScriptAddress :: AAddress -> Bool
+isScriptAddress AAddress { aaddressCredential } = case aaddressCredential of
+  ScriptCredential _    -> True
+  _                     -> False
 
-        g :: ATxInInfo -> Bool
-        g o = valueOf ((atxOutValue . atxInInfoResolved) o) c t  >= 1 && f o
+{-# INLINABLE scriptInputsOk #-}
+scriptInputsOk :: [ATxInInfo] -> CurrencySymbol -> TokenName -> Bool
+scriptInputsOk i c t =
+  let
+    isScriptInput :: ATxInInfo -> Bool
+    isScriptInput = isScriptAddress . atxOutAddress . atxInInfoResolved
+
+  in case filter isScriptInput i of
+    [ATxInInfo{atxInInfoResolved=ATxOut{atxOutValue=v}}] -> valueOf v c t >= 1
+    _ ->  False
 
 {-# INLINABLE txSignedBy' #-}
 txSignedBy' :: [PubKeyHash] -> PubKeyHash -> Bool
