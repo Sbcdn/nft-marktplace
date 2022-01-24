@@ -30,13 +30,14 @@ validateBuy ScriptParams{..} NftShop{..} info
         roy = if sRr <= 0 then 0 else sPrice `cf` sRr
 
         price :: Integer
-        price = sPrice - fee' - roy
+        price = if sR == sSeller then sPrice - fee' else sPrice - fee' - roy
 
         isPaid :: PubKeyHash -> Integer -> Bool
         isPaid addr amt = Ada.fromValue (valuePaidTo' info addr) >= Ada.lovelaceOf amt 
 
         isNftSend :: Bool
         isNftSend = valueOf (valuePaidTo' info (head $ atxInfoSignatories info)) sNftCs sNftTn >= 1
+
 
 {-# INLINABLE validateOwner #-}
 validateOwner ::  NftShop -> ATxInfo -> Bool
