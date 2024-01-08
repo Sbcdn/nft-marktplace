@@ -1,45 +1,41 @@
-{-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE NoImplicitPrelude          #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
 {-# options_ghc -fno-specialise         #-}
 
 module OffChain
   where
-
-import           Cardano.Api.Shelley              (PlutusScript (..), PlutusScriptV1)
+import           Cardano.Api.Shelley            (PlutusScript (..),
+                                                 PlutusScriptV2)
 import           Codec.Serialise
-import qualified Data.ByteString.Lazy             as LB
-import qualified Data.ByteString.Short            as SBS
-import           Ledger                           
-import qualified Ledger.Typed.Scripts             as Scripts
-import qualified Plutus.V1.Ledger.Scripts         as Scripts
+import qualified Data.ByteString.Lazy           as LB
+import qualified Data.ByteString.Short          as SBS
+import qualified Ledger
+import qualified Plutus.Script.Utils.V2.Scripts as Utils
+import qualified Plutus.V1.Ledger.Address       as Address
+import qualified Plutus.V2.Ledger.Api           as PlutusV2
 import qualified PlutusTx
-import           PlutusTx.Prelude                 
-import           Types                            (ScriptParams (..))
-import           OnChain                          (vUt)
+import           PlutusTx.Prelude
+import           OnChain                        (vUt)
+import           Types                          (ScriptParams (..))
 
-
-validator :: BuiltinData -> Scripts.Validator
-validator sp = Scripts.mkValidatorScript
+validator :: BuiltinData -> PlutusV2.Validator
+validator sp = PlutusV2.mkValidatorScript
         ($$(PlutusTx.compile [|| vUt ||])
         `PlutusTx.applyCode` PlutusTx.liftCode sp)
 
-valInstance :: BuiltinData -> Scripts.TypedValidator Scripts.Any
-valInstance sp =
-  Scripts.unsafeMkTypedValidator $ validator sp
+script :: BuiltinData -> PlutusV2.Script
+script = PlutusV2.unValidatorScript . validator
 
-escrowScript :: BuiltinData -> Validator
-escrowScript = Scripts.validatorScript . valInstance
+scriptHash :: BuiltinData -> PlutusV2.ValidatorHash
+scriptHash = Utils.validatorHash . validator
 
-escrowHash :: BuiltinData -> ValidatorHash
-escrowHash = Scripts.validatorHash . valInstance
-
-escrowAddress :: BuiltinData -> Ledger.Address 
-escrowAddress = Ledger.scriptAddress . escrowScript
+scriptAddress :: ScriptParams -> Ledger.Address
+scriptAddress sp = Address.scriptHashAddress $ scriptHash $ PlutusTx.toBuiltinData sp
 
 scriptAsCbor :: BuiltinData -> LB.ByteString
-scriptAsCbor = serialise . escrowScript
+scriptAsCbor = serialise . script
 
-apiScript :: ScriptParams -> PlutusScript PlutusScriptV1
+apiScript :: ScriptParams -> PlutusScript PlutusScriptV2
 apiScript sp = PlutusScriptSerialised $ SBS.toShort $ LB.toStrict $ scriptAsCbor (PlutusTx.toBuiltinData sp)

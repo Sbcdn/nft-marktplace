@@ -13,28 +13,29 @@
 module Types where
 
 import           Ledger
-import           Playground.Contract (FromJSON, Generic, ToJSON)
+import GHC.Generics (Generic)
+import           Data.Aeson           (FromJSON, ToJSON)
 import qualified PlutusTx
 import           PlutusTx.Prelude
 import qualified Prelude             as Prelude
-import           Plutus.V1.Ledger.Credential      (Credential)
+import           Plutus.V2.Ledger.Api
 
 data ScriptParams = ScriptParams 
         {
-              pFee         :: !Integer
-            , pAddr        :: !PubKeyHash
+              pFee         :: Integer
+            , pAddr        :: PubKeyHash
         } deriving (Prelude.Show, Generic, FromJSON, ToJSON, Prelude.Eq, Prelude.Ord)
 PlutusTx.unstableMakeIsData ''ScriptParams
 PlutusTx.makeLift ''ScriptParams
 
 data NftShop = NftShop 
         {
-              sPrice        :: !Integer
-            , sSeller       :: !PubKeyHash  
-            , sRr           :: !Integer
-            , sR            :: !PubKeyHash
-            , sNftCs        :: !CurrencySymbol
-            , sNftTn        :: !TokenName
+              sPrice        :: Integer
+            , sSeller       :: PubKeyHash  
+            , sRr           :: Integer
+            , sR            :: PubKeyHash
+            , sNftCs        :: CurrencySymbol
+            , sNftTn        :: TokenName
         } deriving (Prelude.Show, Generic, FromJSON, ToJSON, Prelude.Eq, Prelude.Ord)
 PlutusTx.makeIsDataIndexed ''NftShop [('NftShop, 0)]
 PlutusTx.makeLift ''NftShop
@@ -54,7 +55,7 @@ PlutusTx.makeIsDataIndexed ''AAddress [('AAddress,0)]
 data ATxOut = ATxOut 
   {
       atxOutAddress             :: AAddress
-    , atxOutValue               :: Value
+    , atxOutValue               :: Plutus.V2.Ledger.Api.Value
     , atxOutDatumHash           :: BuiltinData
   }
 PlutusTx.makeIsDataIndexed ''ATxOut [('ATxOut,0)]

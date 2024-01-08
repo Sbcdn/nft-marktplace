@@ -9,13 +9,12 @@ module OnChain
     ( vUt
     ) where
     
+
 import           Ledger
-import           Plutus.V1.Ledger.Value        
-import           Ledger.Ada                       as Ada
+import           Plutus.V1.Ledger.Value           as Value 
+import           Plutus.V1.Ledger.Api             
 import           PlutusTx.Prelude
 import           Types
-import           PlutusTx.IsData.Class
-import           Plutus.V1.Ledger.Credential      (Credential (PubKeyCredential, ScriptCredential))
 
 {-# INLINABLE validateBuy #-}
 validateBuy :: ScriptParams -> NftShop -> ATxInfo -> Bool 
@@ -33,7 +32,7 @@ validateBuy ScriptParams{..} NftShop{..} info
         price = if sR == sSeller then sPrice - fee' else sPrice - fee' - roy
 
         isPaid :: PubKeyHash -> Integer -> Bool
-        isPaid addr amt = Ada.fromValue (valuePaidTo' info addr) >= Ada.lovelaceOf amt 
+        isPaid addr amt = valueOf (valuePaidTo' info addr) Value.adaSymbol Value.adaToken >= amt 
 
         isNftSend :: Bool
         isNftSend = valueOf (valuePaidTo' info (head $ atxInfoSignatories info)) sNftCs sNftTn >= 1
@@ -76,7 +75,7 @@ txSignedBy' atxInfoSignatories k =
   isJust $ find (k == ) atxInfoSignatories
 
 {-# INLINABLE pubKeyOutputsAt' #-}
-pubKeyOutputsAt' :: PubKeyHash -> ATxInfo -> [Value]
+pubKeyOutputsAt' :: PubKeyHash -> ATxInfo -> [Value.Value]
 pubKeyOutputsAt' pk p =
     let flt ATxOut{ atxOutAddress = AAddress (PubKeyCredential pk') _, atxOutValue } | pk == pk' = Just atxOutValue
                                                                                      | otherwise = Nothing
@@ -84,7 +83,7 @@ pubKeyOutputsAt' pk p =
     in mapMaybe flt (atxInfoOutputs p)
 
 {-# INLINABLE valuePaidTo' #-}
-valuePaidTo' :: ATxInfo -> PubKeyHash -> Value
+valuePaidTo' :: ATxInfo -> PubKeyHash -> Value.Value
 valuePaidTo' info pkh = mconcat (pubKeyOutputsAt' pkh info)
 
 {-# INLINABLE mkVal #-}
